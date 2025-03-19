@@ -27,7 +27,20 @@ export async function detectDeepfake(file: File): Promise<DeepfakeResult> {
       throw new Error(errorData.message || `Failed to analyze ${isVideo ? "video" : "image"}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    
+    // Handle the case where the raw prediction is included in the metadata
+    if (result.metadata?.rawPrediction !== undefined) {
+      // Add a formatted message similar to your Python script output
+      result.formattedResult = `Deepfake Probability: ${(result.confidence * 100).toFixed(2)}% -> Predicted as: ${result.isDeepfake ? "FAKE" : "REAL"}`;
+    }
+    
+    // For videos, add a formatted message using the fakeProbability if available
+    if (isVideo && result.frameResults?.fakeProbability !== undefined) {
+      result.formattedResult = `Deepfake Probability: ${(result.frameResults.fakeProbability * 100).toFixed(2)}% -> Predicted as: ${result.isDeepfake ? "FAKE" : "REAL"}`;
+    }
+
+    return result;
   } catch (error) {
     console.error("API Error:", error);
     throw error;

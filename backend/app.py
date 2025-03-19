@@ -50,53 +50,6 @@ def allowed_image_file(filename):
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
-def predict_image(image_path):
-    """Predict if an image is real or fake."""
-    start_time = time.time()
-    
-    try:
-        # Read image
-        image = cv2.imread(image_path)
-        if image is None:
-            return {"error": "Could not read image file"}, 400
-        
-        # Convert BGR to RGB
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Preprocess image
-        transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=image_processor.image_mean, std=image_processor.image_std)
-        ])
-        
-        image_tensor = transform(image).unsqueeze(0).to(device)  # Add batch dimension
-        
-        # Make prediction
-        with torch.no_grad():
-            outputs = model(image_tensor)
-            logits = outputs.logits
-            probabilities = torch.softmax(logits, dim=1)
-            confidence = probabilities[0, 1].item()  # Probability of being fake
-            is_deepfake = confidence > 0.5
-        
-        processing_time = time.time() - start_time
-        
-        return {
-            "isDeepfake": bool(is_deepfake),
-            "confidence": float(confidence),
-            "processingTime": float(processing_time),
-            "metadata": {
-                "modelName": "ViT-Base-Patch16-224",
-                "version": "1.0",
-                "mediaType": "image"
-            }
-        }
-    except Exception as e:
-        print(f"Error predicting image: {e}")
-        return {"error": str(e)}, 500
-
 def predict_frame(frame):
     """Predict if a single frame is real or fake."""
     try:
@@ -112,13 +65,52 @@ def predict_frame(frame):
         with torch.no_grad():
             outputs = model(frame_tensor)
             logits = outputs.logits
+            # Get raw binary prediction (0=Real, 1=Fake)
+            prediction = torch.argmax(logits, dim=1).item()
+            # Also calculate confidence score for detailed reporting
             probabilities = torch.softmax(logits, dim=1)
             confidence = probabilities[0, 1].item()  # Probability of being fake
         
-        return confidence  # Probability of being fake
+        return prediction, confidence
     except Exception as e:
         print(f"Error predicting frame: {e}")
-        return None
+        return None, None
+
+def predict_image(image_path):
+    """Predict if an image is real or fake."""
+    start_time = time.time()
+    
+    try:
+        # Read image
+        image = cv2.imread(image_path)
+        if image is None:
+            return {"error": "Could not read image file"}, 400
+        
+        # Convert BGR to RGB
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # Get prediction
+        prediction, confidence = predict_frame(image)
+        
+        if prediction is None:
+            return {"error": "Failed to process image"}, 500
+        
+        processing_time = time.time() - start_time
+        
+        return {
+            "isDeepfake": bool(prediction == 1),  # 1 means fake
+            "confidence": float(confidence),
+            "processingTime": float(processing_time),
+            "metadata": {
+                "modelName": "ViT-Base-Patch16-224",
+                "version": "1.0",
+                "mediaType": "image",
+                "rawPrediction": prediction  # 0=Real, 1=Fake
+            }
+        }
+    except Exception as e:
+        print(f"Error predicting image: {e}")
+        return {"error": str(e)}, 500
 
 def predict_video(video_path):
     """Predict if a video is real or fake by analyzing frames."""
@@ -131,7 +123,8 @@ def predict_video(video_path):
         if not cap.isOpened():
             return {"error": "Could not open video file"}, 400
         
-        frame_confidences = []
+        predictions = []
+        confidences = []
         total_frames = 0
         processed_frames = 0
         
@@ -144,21 +137,24 @@ def predict_video(video_path):
             
             # Process every 5th frame for efficiency
             if total_frames % 5 == 0:
-                confidence = predict_frame(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                if confidence is not None:
-                    frame_confidences.append(confidence)
+                prediction, confidence = predict_frame(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                if prediction is not None:
+                    predictions.append(prediction)
+                    confidences.append(confidence)
                     processed_frames += 1
         
         cap.release()
         
         # Handle case where no frames were processed
-        if not frame_confidences:
+        if not predictions:
             return {"error": "No frames could be processed in the video"}, 400
         
-        # Compute average confidence and count fake frames
-        avg_confidence = np.mean(frame_confidences)
-        fake_frames = sum(1 for conf in frame_confidences if conf > 0.5)
-        is_deepfake = avg_confidence > 0.5
+        # Compute fake probability as in your original code
+        fake_prob = predictions.count(1) / len(predictions)
+        is_deepfake = fake_prob > 0.5
+        
+        # Calculate average confidence
+        avg_confidence = np.mean(confidences)
         
         processing_time = time.time() - start_time
         
@@ -168,8 +164,9 @@ def predict_video(video_path):
             "processingTime": float(processing_time),
             "frameResults": {
                 "totalFrames": processed_frames,
-                "fakeFrames": fake_frames,
-                "frameConfidences": [float(conf) for conf in frame_confidences]
+                "fakeFrames": predictions.count(1),
+                "frameConfidences": [float(conf) for conf in confidences],
+                "fakeProbability": float(fake_prob)
             },
             "metadata": {
                 "modelName": "ViT-Base-Patch16-224",
