@@ -28,14 +28,15 @@ export function DeepfakeProvider({ children }: { children: React.ReactNode }) {
   const setFile = useCallback((file: File | null) => {
     if (file) {
       // Create preview URL for the file
-      const preview = URL.createObjectURL(file);
-      setFileState({ ...file, preview });
+      const fileWithPreview = file as FileWithPreview;
+      fileWithPreview.preview = URL.createObjectURL(file);
+      setFileState(fileWithPreview);
       setStatus("idle");
       setError(null);
       setResult(null);
     } else {
-      if (file?.preview) {
-        URL.revokeObjectURL(file.preview);
+      if (file && 'preview' in file) {
+        URL.revokeObjectURL((file as FileWithPreview).preview);
       }
       setFileState(null);
     }

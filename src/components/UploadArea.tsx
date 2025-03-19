@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,6 +13,7 @@ interface UploadAreaProps {
 const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
   const { file, setFile, status, analyzeImage } = useDeepfake();
   const [uploadProgress, setUploadProgress] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Simulate upload progress
   React.useEffect(() => {
@@ -49,9 +50,10 @@ const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
   } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp']
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp'],
+      'video/*': ['.mp4', '.webm', '.mov']
     },
-    maxSize: 10485760, // 10MB
+    maxSize: 100 * 1024 * 1024, // 100MB to support videos
     multiple: false,
     disabled: status === "uploading" || status === "processing"
   });
@@ -61,6 +63,8 @@ const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
     if (isDragReject) return "dropzone dropzone-error";
     return "dropzone dropzone-idle";
   };
+
+  const isVideo = file?.type.startsWith('video/');
 
   return (
     <div className={cn("w-full max-w-2xl mx-auto", className)}>
@@ -92,6 +96,20 @@ const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
               <circle cx="9" cy="9" r="2" />
               <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
             </svg>
+          ) : isVideo ? (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-8 h-8 text-primary"
+            >
+              <polygon points="23 7 16 12 23 17 23 7" />
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+            </svg>
           ) : (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -112,15 +130,15 @@ const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
         <div className="text-center space-y-2">
           <h3 className="text-lg font-semibold">
             {isDragActive
-              ? "Drop the image here"
+              ? "Drop the file here"
               : file
-              ? "Image ready for analysis"
-              : "Upload an image"}
+              ? `${isVideo ? "Video" : "Image"} ready for analysis`
+              : "Upload an image or video"}
           </h3>
           <p className="text-sm text-muted-foreground max-w-xs">
             {file
               ? `${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`
-              : "Drag and drop or click to select an image (JPEG, PNG, WebP)"}
+              : "Drag and drop or click to select an image or video (JPEG, PNG, WebP, MP4, WEBM, MOV)"}
           </p>
         </div>
         
@@ -128,7 +146,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
           <div className="w-full mt-4 space-y-2">
             <Progress value={uploadProgress} className="h-2" />
             <p className="text-xs text-center text-muted-foreground">
-              {status === "uploading" ? "Uploading image..." : "Analyzing image..."}
+              {status === "uploading" ? `Uploading ${isVideo ? "video" : "image"}...` : `Analyzing ${isVideo ? "video" : "image"}...`}
             </p>
           </div>
         )}
@@ -152,7 +170,7 @@ const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
                 analyzeImage();
               }}
             >
-              Analyze Image
+              Analyze {isVideo ? "Video" : "Image"}
             </Button>
           </div>
         )}
@@ -160,12 +178,22 @@ const UploadArea: React.FC<UploadAreaProps> = ({ className }) => {
       
       {file?.preview && status !== "uploading" && (
         <div className="mt-6 w-full overflow-hidden rounded-lg border animate-scale-in">
-          <img
-            src={file.preview}
-            alt="Preview"
-            className="w-full h-auto object-contain"
-            style={{ maxHeight: "300px" }}
-          />
+          {isVideo ? (
+            <video
+              ref={videoRef}
+              src={file.preview}
+              controls
+              className="w-full h-auto"
+              style={{ maxHeight: "300px" }}
+            />
+          ) : (
+            <img
+              src={file.preview}
+              alt="Preview"
+              className="w-full h-auto object-contain"
+              style={{ maxHeight: "300px" }}
+            />
+          )}
         </div>
       )}
     </div>

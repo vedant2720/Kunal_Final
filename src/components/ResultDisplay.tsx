@@ -9,14 +9,15 @@ interface ResultDisplayProps {
 }
 
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ className }) => {
-  const { result, status, resetState } = useDeepfake();
+  const { result, status, file, resetState } = useDeepfake();
 
   if (status !== "success" || !result) {
     return null;
   }
 
-  const { isDeepfake, confidence, processingTime, metadata } = result;
+  const { isDeepfake, confidence, processingTime, frameResults, metadata } = result;
   const confidencePercentage = (confidence * 100).toFixed(2);
+  const isVideo = file?.type.startsWith('video/');
   
   return (
     <div className={cn("mt-8 w-full max-w-2xl mx-auto animate-slide-up", className)}>
@@ -74,14 +75,36 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ className }) => {
                 : "bg-primary/10 text-primary"
             )}
           >
-            {isDeepfake ? "Deepfake Detected" : "Authentic Image"}
+            {isDeepfake ? "Deepfake Detected" : "Authentic Media"}
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             {isDeepfake
-              ? "Our model has detected manipulations in this image that indicate it's likely a deepfake."
-              : "Our model indicates this image appears to be authentic without significant manipulations."}
+              ? `Our model has detected manipulations in this ${isVideo ? "video" : "image"} that indicate it's likely a deepfake.`
+              : `Our model indicates this ${isVideo ? "video" : "image"} appears to be authentic without significant manipulations.`}
           </p>
         </div>
+        
+        {frameResults && isVideo && (
+          <div className="p-4 bg-secondary/30 rounded-lg mb-6">
+            <h4 className="text-sm font-medium mb-2">Video Analysis Details</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Total frames analyzed:</span>
+                <span className="font-medium">{frameResults.totalFrames}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Frames detected as fake:</span>
+                <span className="font-medium">{frameResults.fakeFrames}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Frame-level deepfake ratio:</span>
+                <span className="font-medium">
+                  {((frameResults.fakeFrames / frameResults.totalFrames) * 100).toFixed(2)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         
         {metadata && (
           <div className="p-3 bg-secondary/50 rounded-lg text-xs text-muted-foreground mb-4">
@@ -93,12 +116,16 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ className }) => {
               <span>Version:</span>
               <span className="font-medium">{metadata.version}</span>
             </div>
+            <div className="flex justify-between items-center mt-1">
+              <span>Media Type:</span>
+              <span className="font-medium">{metadata.mediaType || (isVideo ? "video" : "image")}</span>
+            </div>
           </div>
         )}
         
         <div className="flex justify-center">
           <Button onClick={resetState} variant="outline">
-            Analyze Another Image
+            Analyze Another {isVideo ? "Video" : "Image"}
           </Button>
         </div>
       </div>

@@ -3,9 +3,15 @@ export interface DeepfakeResult {
   isDeepfake: boolean;
   confidence: number;
   processingTime: number;
+  frameResults?: {
+    totalFrames: number;
+    fakeFrames: number;
+    frameConfidences?: number[];
+  };
   metadata?: {
     modelName: string;
     version: string;
+    mediaType: "image" | "video";
   };
 }
 

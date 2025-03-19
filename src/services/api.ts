@@ -4,19 +4,27 @@ import { DeepfakeResult } from "@/lib/types";
 // This would be your actual Flask API endpoint
 const API_URL = "http://localhost:5000";
 
-export async function detectDeepfake(image: File): Promise<DeepfakeResult> {
+export async function detectDeepfake(file: File): Promise<DeepfakeResult> {
   try {
     const formData = new FormData();
-    formData.append("image", image);
+    
+    // Determine if the file is an image or video based on its type
+    const isVideo = file.type.startsWith('video/');
+    
+    // Add the file to the form data with the appropriate key
+    formData.append(isVideo ? "video" : "image", file);
 
-    const response = await fetch(`${API_URL}/api/detect`, {
+    // Use the appropriate endpoint based on the file type
+    const endpoint = isVideo ? "detect_video" : "detect";
+    
+    const response = await fetch(`${API_URL}/api/${endpoint}`, {
       method: "POST",
       body: formData,
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Failed to analyze image");
+      throw new Error(errorData.message || `Failed to analyze ${isVideo ? "video" : "image"}`);
     }
 
     return await response.json();
