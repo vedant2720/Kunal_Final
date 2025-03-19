@@ -1,7 +1,7 @@
 
 import { DeepfakeResult } from "@/lib/types";
 
-// This would be your actual Flask API endpoint
+// Point to your Flask API endpoint
 const API_URL = "http://localhost:5000";
 
 export async function detectDeepfake(file: File): Promise<DeepfakeResult> {
