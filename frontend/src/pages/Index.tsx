@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { DeepfakeProvider, useDeepfake } from "@/context/DeepfakeContext";
 import Header from "@/components/Header";
@@ -75,7 +74,7 @@ const HeroSection = () => {
   const isMobile = useIsMobile();
   
   return (
-    <section className="w-full py-12 md:py-24 section-transition">
+    <section className="w-full py-12 md:py-24 section-transition hero-background">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col items-center space-y-4 text-center">
           <div className="space-y-2">

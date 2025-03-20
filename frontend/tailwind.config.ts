@@ -1,5 +1,6 @@
-
 import type { Config } from "tailwindcss";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 
 export default {
 	darkMode: ["class"],
@@ -68,6 +69,12 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-dark': 'linear-gradient(to bottom, hsl(250 15% 15%), hsl(260 20% 10%), hsl(270 25% 8%))',
+				'gradient-card': 'linear-gradient(135deg, rgba(40, 40, 70, 0.7) 0%, rgba(29, 29, 59, 0.5) 100%)',
+				'gradient-primary': 'linear-gradient(90deg, hsla(250, 76%, 48%, 0.7) 0%, hsla(270, 69%, 64%, 0.4) 100%)',
+				'hero-glow': 'radial-gradient(circle at 20% 30%, rgba(121, 40, 202, 0.15), transparent 25%), radial-gradient(circle at 80% 20%, rgba(41, 101, 202, 0.1), transparent 20%), radial-gradient(circle at 40% 70%, rgba(230, 41, 134, 0.08), transparent 30%)'
 			},
 			keyframes: {
 				'accordion-down': {
