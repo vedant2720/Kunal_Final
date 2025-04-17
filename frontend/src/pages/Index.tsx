@@ -238,7 +238,7 @@ const AboutSection = () => {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Accuracy</span>
-                  <span className="font-medium">~97% on test dataset</span>
+                  <span className="font-medium">~76% on test dataset</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Processing Time</span>

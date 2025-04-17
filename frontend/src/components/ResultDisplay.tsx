@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useDeepfake } from "@/context/DeepfakeContext";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,9 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ className }) => {
     return null;
   }
 
-  const { isDeepfake, confidence, processingTime, frameResults, metadata } = result;
+  // Use the label and confidence directly from API response
+  const { label, confidence, processingTime } = result;
+  const isFake = label === "Fake";
   const confidencePercentage = (confidence * 100).toFixed(2);
   const isVideo = file?.type.startsWith('video/');
   
@@ -24,9 +25,11 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ className }) => {
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Analysis Results</h3>
-          <span className="text-xs text-muted-foreground">
-            Processed in {processingTime.toFixed(2)}s
-          </span>
+          {processingTime && (
+            <span className="text-xs text-muted-foreground">
+              Processed in {processingTime.toFixed(2)}s
+            </span>
+          )}
         </div>
         
         <div className="flex items-center justify-center my-8">
@@ -48,12 +51,12 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ className }) => {
                 cy="50"
                 r="45"
                 fill="none"
-                stroke={isDeepfake ? "currentColor" : "currentColor"}
+                stroke="currentColor"
                 strokeWidth="8"
                 strokeDasharray={`${Number(confidencePercentage) * 2.83} 283`}
                 strokeLinecap="round"
                 className={`progress-ring ${
-                  isDeepfake ? "text-destructive" : "text-primary"
+                  isFake ? "text-destructive" : "text-primary"
                 }`}
               />
             </svg>
@@ -70,58 +73,19 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ className }) => {
           <div 
             className={cn(
               "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
-              isDeepfake 
+              isFake 
                 ? "bg-destructive/10 text-destructive" 
                 : "bg-primary/10 text-primary"
             )}
           >
-            {isDeepfake ? "Deepfake Detected" : "Authentic Media"}
+            {label}
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            {isDeepfake
-              ? `Our model has detected manipulations in this ${isVideo ? "video" : "image"} that indicate it's likely a deepfake.`
-              : `Our model indicates this ${isVideo ? "video" : "image"} appears to be authentic without significant manipulations.`}
+            {isFake
+              ? `Our model has classified this ${isVideo ? "video" : "image"} as fake with ${confidencePercentage}% confidence.`
+              : `Our model has classified this ${isVideo ? "video" : "image"} as real with ${confidencePercentage}% confidence.`}
           </p>
         </div>
-        
-        {frameResults && isVideo && (
-          <div className="p-4 bg-secondary/30 rounded-lg mb-6">
-            <h4 className="text-sm font-medium mb-2">Video Analysis Details</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Total frames analyzed:</span>
-                <span className="font-medium">{frameResults.totalFrames}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Frames detected as fake:</span>
-                <span className="font-medium">{frameResults.fakeFrames}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Frame-level deepfake ratio:</span>
-                <span className="font-medium">
-                  {((frameResults.fakeFrames / frameResults.totalFrames) * 100).toFixed(2)}%
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {metadata && (
-          <div className="p-3 bg-secondary/50 rounded-lg text-xs text-muted-foreground mb-4">
-            <div className="flex justify-between items-center">
-              <span>Model:</span>
-              <span className="font-medium">{metadata.modelName}</span>
-            </div>
-            <div className="flex justify-between items-center mt-1">
-              <span>Version:</span>
-              <span className="font-medium">{metadata.version}</span>
-            </div>
-            <div className="flex justify-between items-center mt-1">
-              <span>Media Type:</span>
-              <span className="font-medium">{metadata.mediaType || (isVideo ? "video" : "image")}</span>
-            </div>
-          </div>
-        )}
         
         <div className="flex justify-center">
           <Button onClick={resetState} variant="outline">
